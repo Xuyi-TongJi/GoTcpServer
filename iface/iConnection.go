@@ -11,10 +11,12 @@ type IConnection interface {
 	// GetTcpConnection 获取当前连接所绑定的socket connection（套接字）
 	GetTcpConnection() *net.TCPConn
 	// GetConnId 获取当前连接模块的连接ID
-	GetConnId()
+	GetConnId() uint32
 	// GetClientTcpStatus 获取客户端（对端）的TCP状态
-	GetClientTcpStatus()
-	// 发送数据，将数据发送给远程的客户端
+	GetClientTcpStatus() net.Addr
+	// Send 发送数据，将数据发送给远程的客户端
+	Send(data []byte) error
 }
 
-// 定义一个处理连接业务的方法
+// HandleFunc 定义一个处理连接业务的方法
+type HandleFunc func(IConnection, []byte, int) error

@@ -12,6 +12,8 @@ type Server struct {
 	Address   string
 	IPVersion string
 	Port      int
+	// Server注册的连接对应的处理业务
+	Router iface.IRouter
 }
 
 // Start 监听，处理业务
@@ -19,6 +21,7 @@ func (s *Server) Start() {
 	fmt.Printf("[Server START] Server Listener at IP: %s, Port: %d, is starting\n", s.Address, s.Port)
 
 	go func() {
+		var cid uint32 = 0
 		// 获取一个TCP的Addr
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.Address, s.Port))
 		if err != nil {
@@ -39,22 +42,11 @@ func (s *Server) Start() {
 				fmt.Printf("[Server BUSINESS ERROR] Accept error:%s\n", err)
 				continue
 			}
-			// 客户端已经与服务器建立连接 -> 可以处理业务了
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					count, err := conn.Read(buf)
-					if err != nil {
-						fmt.Printf("[Server BUSINESS ERROR] Receive buffer error:%s\n", err)
-						continue
-					}
-					fmt.Printf("[Server BUSINESS] Receive buffer:%s\n", buf)
-					if _, err := conn.Write(buf[:count]); err != nil {
-						fmt.Printf("[Server BUSINESS ERROR] Write back buffer error:%s\n", err)
-						continue
-					}
-				}
-			}()
+			// Connection模块，得到处理业务的connection句柄
+			socket := NewConnection(conn, cid, s.Router)
+			cid += 1
+			// 启动当前的连接业务处理
+			go socket.Start()
 		}
 	}()
 }
@@ -73,6 +65,12 @@ func (s *Server) Serve() {
 	select {}
 }
 
+// AddRouter 添加路由
+func (s *Server) AddRouter(r iface.IRouter) {
+	s.Router = r
+	fmt.Printf("[Server Router] Add server router success\n")
+}
+
 // NewServer 初始化Server模块的方法
 func NewServer(name string, ipVersion string, address string, port int) iface.IServer {
 	return &Server{
@@ -80,5 +78,6 @@ func NewServer(name string, ipVersion string, address string, port int) iface.IS
 		IPVersion: ipVersion,
 		Address:   address,
 		Port:      port,
+		Router:    nil,
 	}
 }

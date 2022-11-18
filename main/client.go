@@ -18,7 +18,6 @@ func main() {
 		fmt.Printf("[Client ERROR]Connection errer:%s\n", err)
 		return
 	}
-	// in := bufio.NewScanner(os.Stdin)
 	for {
 		_, err := conn.Write([]byte("hello"))
 		if err != nil {
@@ -30,7 +29,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("[Client ERROR]Reading buffer error:%s\n", err)
 		}
-		fmt.Printf("[Cient]Server call back: %s, count = %d\n", buf, count)
-		time.Sleep(2 * time.Second)
+		fmt.Printf("[Client]Server call back: %s, count = %d\n", buf, count)
+		time.Sleep(5 * time.Second)
 	}
 }
