@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
-	"server/config"
+	"server/utils"
 	"time"
 )
 
@@ -11,9 +11,9 @@ func main() {
 	// 连接服务器，得到一个conn连接
 	fmt.Println("[Client START]Client start...")
 	time.Sleep(1 * time.Second)
-	fmt.Println(fmt.Sprintf("%s:%d", config.Address, config.Port))
-	conn, err := net.Dial(config.Protocol,
-		fmt.Sprintf("%s:%d", config.Address, config.Port))
+	fmt.Println(fmt.Sprintf("%s:%d", utils.GlobalObj.Host, utils.GlobalObj.TcpPort))
+	conn, err := net.Dial("tcp",
+		fmt.Sprintf("%s:%d", utils.GlobalObj.Host, utils.GlobalObj.TcpPort))
 	if err != nil {
 		fmt.Printf("[Client ERROR]Connection errer:%s\n", err)
 		return

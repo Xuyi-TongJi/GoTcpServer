@@ -1,25 +1,40 @@
-package net
+package network
 
 import (
 	"fmt"
 	"net"
 	"server/iface"
+	"server/utils"
 )
 
 // Server IServer的接口实现，定义一个Server的服务器模块
 type Server struct {
-	Name      string
-	Address   string
-	IPVersion string
-	Port      int
+	Name           string
+	Address        string
+	IPVersion      string
+	Version        string
+	Port           int
+	MaxConn        int
+	MaxPackingSize uint32
 	// Server注册的连接对应的处理业务
 	Router iface.IRouter
 }
 
+func logConfig() {
+	fmt.Println("[Server Config] Server config success")
+	fmt.Println("Name: ", utils.GlobalObj.Name)
+	fmt.Println("Version: ", utils.GlobalObj.Version)
+	fmt.Println("Host: ", utils.GlobalObj.Host)
+	fmt.Println("Port: ", utils.GlobalObj.TcpPort)
+	fmt.Println("MaxConn: ", utils.GlobalObj.MaxConn)
+	fmt.Println("MaxPackagingSize: ", utils.GlobalObj.MaxPackingSize)
+	fmt.Printf("[Server START] Server Listener at IP: %s, Port: %d, is starting\n",
+		utils.GlobalObj.Host, utils.GlobalObj.TcpPort)
+}
+
 // Start 监听，处理业务
 func (s *Server) Start() {
-	fmt.Printf("[Server START] Server Listener at IP: %s, Port: %d, is starting\n", s.Address, s.Port)
-
+	logConfig()
 	go func() {
 		var cid uint32 = 0
 		// 获取一个TCP的Addr
@@ -72,12 +87,15 @@ func (s *Server) AddRouter(r iface.IRouter) {
 }
 
 // NewServer 初始化Server模块的方法
-func NewServer(name string, ipVersion string, address string, port int) iface.IServer {
+func NewServer(ipVersion string) iface.IServer {
 	return &Server{
-		Name:      name,
-		IPVersion: ipVersion,
-		Address:   address,
-		Port:      port,
-		Router:    nil,
+		Name:           utils.GlobalObj.Name,
+		IPVersion:      ipVersion,
+		Address:        utils.GlobalObj.Host,
+		Port:           utils.GlobalObj.TcpPort,
+		Version:        utils.GlobalObj.Version,
+		MaxConn:        utils.GlobalObj.MaxConn,
+		MaxPackingSize: utils.GlobalObj.MaxPackingSize,
+		Router:         nil,
 	}
 }

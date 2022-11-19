@@ -1,9 +1,10 @@
-package net
+package network
 
 import (
 	"fmt"
 	"net"
 	"server/iface"
+	"server/utils"
 )
 
 type Connection struct {
@@ -16,7 +17,7 @@ type Connection struct {
 	// 当前的连接状态
 	IsClosed bool
 
-	// 告知当前丽娜姐已经退出/停止的 channel
+	// 告知当前连接已经退出/停止的 channel
 	ExitChan chan bool
 
 	// 该连接处理的方法Router
@@ -30,7 +31,7 @@ func (c *Connection) startReader() {
 
 	for {
 		// read data from client to buffer and call the handle function
-		buf := make([]byte, 512)
+		buf := make([]byte, utils.GlobalObj.MaxPackingSize)
 		count, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Printf("[Connection Reader Goroutine ERROR] Receive Buffer from %s error: %s", c.GetClientTcpStatus(), err)
@@ -42,10 +43,9 @@ func (c *Connection) startReader() {
 			data: buf,
 			len:  count,
 		}
+		// go 处理这个请求(Router中有具体的业务逻辑)
 		go func() {
-			c.Router.PreHandle(&req)
-			c.Router.DoHandle(&req)
-			c.Router.PostHandle(&req)
+			iface.Handle(c.Router, &req)
 		}()
 	}
 }

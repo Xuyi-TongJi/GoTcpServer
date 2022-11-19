@@ -1,4 +1,4 @@
-package net
+package network
 
 import "server/iface"
 
@@ -15,6 +15,3 @@ func (b *BaseRouter) PreHandle(request iface.IRequest) {}
 func (b *BaseRouter) DoHandle(request iface.IRequest) {}
 
 func (b *BaseRouter) PostHandle(request iface.IRequest) {}
-
-// Handle 模版方法
-func (b *BaseRouter) Handle(request iface.IRequest) {}

@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"server/config"
 	"server/iface"
-	"server/net"
+	"server/network"
+	"server/utils"
+	"time"
 )
 
 // PingRouter 自定义Router
 type PingRouter struct {
-	net.BaseRouter
+	network.BaseRouter
 }
 
 // PreHandle Override
@@ -38,6 +39,7 @@ func (r *PingRouter) PostHandle(req iface.IRequest) {
 	if err != nil {
 		fmt.Printf("[Router PostHandle] Call back after handle, error:%s\n", err)
 	}
+	time.Sleep(5 * time.Second)
 }
 
 /*
@@ -46,8 +48,9 @@ func (r *PingRouter) PostHandle(req iface.IRequest) {
 
 func main() {
 	// 创建一个Server句柄
-	s := net.NewServer("my_server", config.IPVersion, config.Address, config.Port)
+	s := network.NewServer("tcp4")
 	s.AddRouter(&PingRouter{})
 	// 启动Server
+	utils.GlobalObj.TcpServer = s
 	s.Serve()
 }

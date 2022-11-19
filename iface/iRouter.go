@@ -13,3 +13,10 @@ type IRouter interface {
 	// PostHandle 在处理connection业务之后的方法Hook
 	PostHandle(request IRequest)
 }
+
+// Handle 模版方法
+func Handle(router IRouter, request IRequest) {
+	router.PreHandle(request)
+	router.DoHandle(request)
+	router.PostHandle(request)
+}
