@@ -8,7 +8,9 @@ import "server/iface"
 */
 
 // BaseRouter 基类 BaseRouter的方法都为空，是因为可以让Router的具体实现更灵活的实现这三个方法
-type BaseRouter struct{}
+type BaseRouter struct {
+	name string
+}
 
 func (b *BaseRouter) PreHandle(request iface.IRequest) {}
 

@@ -16,8 +16,8 @@ type Server struct {
 	Port           int
 	MaxConn        int
 	MaxPackingSize uint32
-	// Server注册的连接对应的处理业务
-	Router iface.IRouter
+	// 消息管理模块 用于绑定msgId和对应业务的处理关系
+	MsgHandler iface.IMessageHandler
 }
 
 func logConfig() {
@@ -58,7 +58,7 @@ func (s *Server) Start() {
 				continue
 			}
 			// Connection模块，得到处理业务的connection句柄
-			socket := NewConnection(conn, cid, s.Router)
+			socket := NewConnection(conn, cid, s.MsgHandler)
 			cid += 1
 			// 启动当前的连接业务处理
 			go socket.Start()
@@ -81,9 +81,8 @@ func (s *Server) Serve() {
 }
 
 // AddRouter 添加路由
-func (s *Server) AddRouter(r iface.IRouter) {
-	s.Router = r
-	fmt.Printf("[Server Router] Add server router success\n")
+func (s *Server) AddRouter(msgId uint32, r iface.IRouter) {
+	s.MsgHandler.AddRouter(msgId, r)
 }
 
 // NewServer 初始化Server模块的方法
@@ -96,6 +95,6 @@ func NewServer(ipVersion string) iface.IServer {
 		Version:        utils.GlobalObj.Version,
 		MaxConn:        utils.GlobalObj.MaxConn,
 		MaxPackingSize: utils.GlobalObj.MaxPackingSize,
-		Router:         nil,
+		MsgHandler:     NewMessageHandler(),
 	}
 }

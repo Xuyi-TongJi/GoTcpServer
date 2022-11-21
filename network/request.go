@@ -20,6 +20,6 @@ func (r *Request) GetDataLen() uint32 {
 	return r.message.GetLen()
 }
 
-func (r *Request) GetDataId() uint32 {
+func (r *Request) GetMsgId() uint32 {
 	return r.message.GetMsgId()
 }

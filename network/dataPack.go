@@ -41,10 +41,10 @@ func (d *DataPack) Pack(msg iface.IMessage) ([]byte, error) {
 }
 
 // Unpack 读入并封装Message Head (len + id)
-func (d *DataPack) Unpack(data []byte) (iface.IMessage, error) {
+func (d *DataPack) Unpack(head []byte) (iface.IMessage, error) {
 	msg := &Message{}
-	// read data by reader
-	reader := bytes.NewReader(data)
+	// read head data by reader
+	reader := bytes.NewReader(head)
 	/* 最后一个参数是数据类型， &msg.Len uint32 代表读4个字节 并且读入到msg.Len赋值 */
 	if err := binary.Read(reader, binary.LittleEndian, &msg.Len); err != nil {
 		return nil, err

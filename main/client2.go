@@ -23,10 +23,10 @@ func main() {
 	for {
 		// 发送Message消息 TLV格式
 		dp := network.DataPack{}
-		var s string = "ping, server!"
+		var s string = "hello, server!"
 		length := uint32(len(s))
 		msg := &network.Message{
-			Id:   0,
+			Id:   1,
 			Len:  length,
 			Data: []byte(s),
 		}

@@ -21,8 +21,8 @@ type Connection struct {
 	// 告知当前连接已经退出/停止的 channel
 	ExitChan chan bool
 
-	// 该连接处理的方法Router
-	Router iface.IRouter
+	// 消息处理器
+	MsgHandler iface.IMessageHandler
 }
 
 // startReader 从当前连接读数据的业务
@@ -37,12 +37,12 @@ func (c *Connection) startReader() {
 		headData := make([]byte, dp.GetHeadLen())
 		_, err := io.ReadFull(c.Conn, headData)
 		if err != nil {
-			fmt.Printf("[Connection Reading Goroutine ERROR] Connection %d, error reading head data, err:%s\n", c.ConnId, err)
+			fmt.Printf("[Connection Reader Goroutine ERROR] Connection %d, error reading head data, err:%s\n", c.ConnId, err)
 			break
 		}
 		msg, err := dp.Unpack(headData)
 		if err != nil {
-			fmt.Printf("[Connection Reading Goroutine ERROR] Connection %d, invalid message id or data, message id = %d, len = %d, err:%s\n",
+			fmt.Printf("[Connection Reader Goroutine ERROR] Connection %d, invalid message id or data, message id = %d, len = %d, err:%s\n",
 				c.ConnId, msg.GetMsgId(), msg.GetLen(), err)
 			break
 		}
@@ -51,7 +51,7 @@ func (c *Connection) startReader() {
 			msg.SetData(make([]byte, msg.GetLen()))
 			_, err = io.ReadFull(c.Conn, msg.GetData())
 			if err != nil {
-				fmt.Printf("[Connection Reading Goroutine ERROR] Connection %d, invalid message id or data, message id = %d, len = %d, err:%s\n",
+				fmt.Printf("[Connection Reader Goroutine ERROR] Connection %d, invalid message id or data, message id = %d, len = %d, err:%s\n",
 					c.ConnId, msg.GetMsgId(), msg.GetLen(), err)
 				break
 			}
@@ -62,9 +62,7 @@ func (c *Connection) startReader() {
 			message: msg,
 		}
 		// go 处理这个Request(Router中有具体的业务逻辑)
-		go func() {
-			iface.Handle(c.Router, &req)
-		}()
+		go c.MsgHandler.DoHandle(&req)
 	}
 }
 
@@ -126,12 +124,12 @@ func (c *Connection) SendMessage(msgId uint32, data []byte) error {
 }
 
 // NewConnection 初始化连接模块的方法
-func NewConnection(conn *net.TCPConn, id uint32, router iface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, id uint32, msgHandler iface.IMessageHandler) *Connection {
 	c := &Connection{
-		Conn:     conn,
-		ConnId:   id,
-		IsClosed: false,
-		Router:   router,
+		Conn:       conn,
+		ConnId:     id,
+		IsClosed:   false,
+		MsgHandler: msgHandler,
 		// 有缓冲的管道
 		ExitChan: make(chan bool, 1),
 	}
