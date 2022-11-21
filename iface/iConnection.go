@@ -14,8 +14,8 @@ type IConnection interface {
 	GetConnId() uint32
 	// GetClientTcpStatus 获取客户端（对端）的TCP状态
 	GetClientTcpStatus() net.Addr
-	// Send 发送数据，将数据发送给远程的客户端
-	Send(data []byte) error
+	// SendMessage 发送数据，将数据封包为Message并发送给远程的客户端
+	SendMessage(msgId uint32, data []byte) error
 }
 
 // HandleFunc 定义一个处理连接业务的方法

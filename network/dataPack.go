@@ -19,19 +19,20 @@ func (d *DataPack) GetHeadLen() uint32 {
 
 // Pack 将封装好的Message以TLV格式输出为字节流
 // 使用Buffer读
+// 最终的binary data格式 len|id|data
 func (d *DataPack) Pack(msg iface.IMessage) ([]byte, error) {
 	buffer := bytes.NewBuffer([]byte{})
-	// write data len 4bytes
+	// write data len 4bytes to buffer
 	err := binary.Write(buffer, binary.LittleEndian, msg.GetLen())
 	if err != nil {
 		return nil, err
 	}
-	// write id 4bytes
+	// write id 4bytes to buffer
 	err = binary.Write(buffer, binary.LittleEndian, msg.GetMsgId())
 	if err != nil {
 		return nil, err
 	}
-	// write data
+	// write data to buffer
 	err = binary.Write(buffer, binary.LittleEndian, msg.GetData())
 	if err != nil {
 		return nil, err

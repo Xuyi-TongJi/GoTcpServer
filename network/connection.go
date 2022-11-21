@@ -1,10 +1,11 @@
 package network
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"server/iface"
-	"server/utils"
 )
 
 type Connection struct {
@@ -26,24 +27,41 @@ type Connection struct {
 
 // startReader 从当前连接读数据的业务
 func (c *Connection) startReader() {
-	fmt.Printf("[Connection Reader Goroutine] Reader Gouroutine is Running... Romote addr= %s", c.GetClientTcpStatus())
+	fmt.Printf("[Connection Reader Goroutine] Reader Gouroutine is Running... Romote addr= %s\n", c.GetClientTcpStatus())
 	defer c.Stop()
 
 	for {
 		// read data from client to buffer and call the handle function
-		buf := make([]byte, utils.GlobalObj.MaxPackingSize)
-		count, err := c.Conn.Read(buf)
+		// 拆包 -> Message
+		dp := &DataPack{}
+		headData := make([]byte, dp.GetHeadLen())
+		_, err := io.ReadFull(c.Conn, headData)
 		if err != nil {
-			fmt.Printf("[Connection Reader Goroutine ERROR] Receive Buffer from %s error: %s", c.GetClientTcpStatus(), err)
-			continue
+			fmt.Printf("[Connection Reading Goroutine ERROR] Connection %d, error reading head data, err:%s\n", c.ConnId, err)
+			break
+		}
+		msg, err := dp.Unpack(headData)
+		if err != nil {
+			fmt.Printf("[Connection Reading Goroutine ERROR] Connection %d, invalid message id or data, message id = %d, len = %d, err:%s\n",
+				c.ConnId, msg.GetMsgId(), msg.GetLen(), err)
+			break
+		}
+		// read data by the tag of data len
+		if msg.GetLen() > 0 {
+			msg.SetData(make([]byte, msg.GetLen()))
+			_, err = io.ReadFull(c.Conn, msg.GetData())
+			if err != nil {
+				fmt.Printf("[Connection Reading Goroutine ERROR] Connection %d, invalid message id or data, message id = %d, len = %d, err:%s\n",
+					c.ConnId, msg.GetMsgId(), msg.GetLen(), err)
+				break
+			}
 		}
 		// 得到当前conn数据的Request
 		req := Request{
-			conn: c,
-			data: buf,
-			len:  count,
+			conn:    c,
+			message: msg,
 		}
-		// go 处理这个请求(Router中有具体的业务逻辑)
+		// go 处理这个Request(Router中有具体的业务逻辑)
 		go func() {
 			iface.Handle(c.Router, &req)
 		}()
@@ -69,7 +87,7 @@ func (c *Connection) Stop() {
 	if err != nil {
 		fmt.Printf("[Connection STOP ERROR] Connection %d stopped error:%s\n", c.ConnId, err)
 	}
-	fmt.Printf("[Connection STOP] Connection %d stopped success", c.ConnId)
+	fmt.Printf("[Connection STOP] Connection %d stopped success\n", c.ConnId)
 	close(c.ExitChan)
 }
 
@@ -85,9 +103,26 @@ func (c *Connection) GetClientTcpStatus() net.Addr {
 	return c.GetTcpConnection().RemoteAddr()
 }
 
-func (c *Connection) Send(data []byte) error {
-	//TODO implement me
-	panic("implement me")
+// SendMessage Send 将数据封包并回写给服务端
+func (c *Connection) SendMessage(msgId uint32, data []byte) error {
+	if c.IsClosed {
+		return errors.New(fmt.Sprintf("[Connection Writing GoRoutine] Connection %d was closed\n", c.ConnId))
+	}
+	dp := DataPack{}
+	msg := &Message{
+		Id:   msgId,
+		Len:  uint32(len(data)),
+		Data: data,
+	}
+	// ID
+	binaryData, err := dp.Pack(msg)
+	if err != nil {
+		return errors.New(fmt.Sprintf("[Connection Writing GoRoutine] Connection %d, packing message error: %s\n", c.ConnId, err))
+	}
+	if _, err = c.Conn.Write(binaryData); err != nil {
+		return errors.New(fmt.Sprintf("[Connection Writing GoRoutine] Connection %d, write pipe error: %s\n", c.ConnId, err))
+	}
+	return nil
 }
 
 // NewConnection 初始化连接模块的方法
