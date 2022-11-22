@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"server/iface"
+	"server/utils"
 )
 
 type Connection struct {
@@ -21,14 +22,23 @@ type Connection struct {
 	// 告知当前连接已经退出/停止的 channel
 	ExitChan chan bool
 
-	// 消息处理器
+	// 无缓冲管道，用于读写go routine之间的消息通信
+	MessageChan chan []byte
+
+	// 消息处理器，有缓冲的管道
 	MsgHandler iface.IMessageHandler
 }
 
-// startReader 从当前连接读数据的业务
+// startReader 从当前连接读数据的模块
 func (c *Connection) startReader() {
-	fmt.Printf("[Connection Reader Goroutine] Reader Gouroutine is Running... Romote addr= %s\n", c.GetClientTcpStatus())
-	defer c.Stop()
+	fmt.Printf("[Connection Reader Goroutine] Connection %d reader gouroutine is running. Romote addr = %s\n",
+		c.ConnId, c.GetClientTcpStatus().String())
+	defer func() {
+		fmt.Printf("[Connection Reader Goroutine] %s Connection %d was closed, reader goroutine closed\n",
+			c.GetClientTcpStatus().String(), c.ConnId)
+		// reader goroutine exit 关闭连接 并向writer goroutine 发送消息让其退出
+		c.Stop()
+	}()
 
 	for {
 		// read data from client to buffer and call the handle function
@@ -61,8 +71,35 @@ func (c *Connection) startReader() {
 			conn:    c,
 			message: msg,
 		}
-		// go 处理这个Request(Router中有具体的业务逻辑)
-		go c.MsgHandler.DoHandle(&req)
+		if utils.GlobalObj.WorkerPoolSize > 0 {
+			// 将请求交给Message Handler 执行具体的业务逻辑
+			c.MsgHandler.SubmitTask(&req)
+		} else {
+			go c.MsgHandler.DoHandle(&req)
+		}
+	}
+}
+
+// startWriter 向当前连接写数据的模块
+func (c *Connection) startWriter() {
+	fmt.Printf("[Connection Writer Goroutine] Connection %d writer gouroutine is running. Romote addr = %s\n",
+		c.ConnId, c.GetClientTcpStatus().String())
+	defer fmt.Printf("[Connection Writer Goroutine] %s Connection %d was closed, writer goroutine closed\n",
+		c.GetClientTcpStatus().String(), c.GetConnId())
+	for {
+		select {
+		case data := <-c.MessageChan:
+			if _, err := c.GetTcpConnection().Write(data); err != nil {
+				fmt.Printf("[Connection Writer Goroutine ERROR] Connection %d writing back error: %s\n", c.ConnId, err)
+				return
+			} else {
+				fmt.Printf("[Connection Writer Goroutine] Connection %d writing back to the client success\n",
+					c.ConnId)
+			}
+		case <-c.ExitChan:
+			// Reader已经退出
+			return
+		}
 	}
 }
 
@@ -71,7 +108,8 @@ func (c *Connection) Start() {
 	fmt.Printf("[Connection START] Connection %d starting\n", c.ConnId)
 	// 启动从当前连接读数据的业务
 	go c.startReader()
-	// TODO 启动从当前连接写数据的业务
+	// 启动从当前连接写数据的业务
+	go c.startWriter()
 }
 
 func (c *Connection) Stop() {
@@ -79,6 +117,8 @@ func (c *Connection) Stop() {
 	if c.IsClosed {
 		return
 	}
+	// 告知Writer关闭
+	c.ExitChan <- true
 	c.IsClosed = true
 	// 回收资源
 	err := c.Conn.Close()
@@ -86,6 +126,7 @@ func (c *Connection) Stop() {
 		fmt.Printf("[Connection STOP ERROR] Connection %d stopped error:%s\n", c.ConnId, err)
 	}
 	fmt.Printf("[Connection STOP] Connection %d stopped success\n", c.ConnId)
+	close(c.MessageChan)
 	close(c.ExitChan)
 }
 
@@ -101,7 +142,7 @@ func (c *Connection) GetClientTcpStatus() net.Addr {
 	return c.GetTcpConnection().RemoteAddr()
 }
 
-// SendMessage Send 将数据封包并回写给服务端
+// SendMessage 将数据封包为二进制数据并发送给写协程
 func (c *Connection) SendMessage(msgId uint32, data []byte) error {
 	if c.IsClosed {
 		return errors.New(fmt.Sprintf("[Connection Writing GoRoutine] Connection %d was closed\n", c.ConnId))
@@ -112,26 +153,25 @@ func (c *Connection) SendMessage(msgId uint32, data []byte) error {
 		Len:  uint32(len(data)),
 		Data: data,
 	}
-	// ID
+	// pack (message to binary data)
 	binaryData, err := dp.Pack(msg)
 	if err != nil {
 		return errors.New(fmt.Sprintf("[Connection Writing GoRoutine] Connection %d, packing message error: %s\n", c.ConnId, err))
 	}
-	if _, err = c.Conn.Write(binaryData); err != nil {
-		return errors.New(fmt.Sprintf("[Connection Writing GoRoutine] Connection %d, write pipe error: %s\n", c.ConnId, err))
-	}
+	// 将data发送给写协程
+	c.MessageChan <- binaryData
 	return nil
 }
 
 // NewConnection 初始化连接模块的方法
 func NewConnection(conn *net.TCPConn, id uint32, msgHandler iface.IMessageHandler) *Connection {
 	c := &Connection{
-		Conn:       conn,
-		ConnId:     id,
-		IsClosed:   false,
-		MsgHandler: msgHandler,
-		// 有缓冲的管道
-		ExitChan: make(chan bool, 1),
+		Conn:        conn,
+		ConnId:      id,
+		IsClosed:    false,
+		MsgHandler:  msgHandler,
+		MessageChan: make(chan []byte),
+		ExitChan:    make(chan bool, 1),
 	}
 	return c
 }

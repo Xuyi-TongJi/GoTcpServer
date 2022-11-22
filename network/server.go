@@ -37,6 +37,8 @@ func (s *Server) Start() {
 	logConfig()
 	go func() {
 		var cid uint32 = 0
+		// 开启工作池及其消息队列
+		s.MsgHandler.StartWorkerPool()
 		// 获取一个TCP的Addr
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.Address, s.Port))
 		if err != nil {
@@ -73,8 +75,7 @@ func (s *Server) Stop() {
 // Serve 阻塞
 func (s *Server) Serve() {
 	s.Start()
-
-	// TODO 启动服务器之后的额外业务
+	//TODO 启动服务器之后的额外业务
 
 	// 阻塞
 	select {}

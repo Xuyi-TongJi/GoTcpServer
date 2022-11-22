@@ -29,6 +29,7 @@ type PingRouter struct {
 
 // DoHandle Override
 func (r *PingRouter) DoHandle(req iface.IRequest) {
+	/* BUSINESS */
 	fmt.Printf("[Router Handle] Call router handle, receive message id = %d, data len = %d\n",
 		req.GetMsgId(), req.GetDataLen())
 	fmt.Printf("[Router Handle] Receive message [%s]\n", req.GetData())
@@ -41,7 +42,8 @@ func (r *PingRouter) DoHandle(req iface.IRequest) {
 		fmt.Printf("[Router Handle ERROR] Response writing error: %s\n", err)
 		return
 	}
-	// Send message to client
+	/* BUSINESS */
+	// Send message to writer goroutine
 	if err := req.GetConnection().SendMessage(200, dataBuffer.Bytes()); err != nil {
 		fmt.Printf("[Router Handle ERROR] Response writing error: %s\n", err)
 		return
@@ -64,6 +66,7 @@ type HelloRouter struct {
 }
 
 func (r *HelloRouter) DoHandle(req iface.IRequest) {
+	/* BUSINESS */
 	fmt.Printf("[Router Handle] Call router handle, receive message id = %d, data len = %d\n",
 		req.GetMsgId(), req.GetDataLen())
 	fmt.Printf("[Router Handle] Receive message [%s]\n", req.GetData())
@@ -76,7 +79,8 @@ func (r *HelloRouter) DoHandle(req iface.IRequest) {
 		fmt.Printf("[Router Handle ERROR] Response writing error: %s\n", err)
 		return
 	}
-	// Send message to client
+	/* BUSINESS */
+	// Send message to writer goroutine
 	if err := req.GetConnection().SendMessage(201, dataBuffer.Bytes()); err != nil {
 		fmt.Printf("[Router Handle ERROR] Response writing error: %s\n", err)
 		return

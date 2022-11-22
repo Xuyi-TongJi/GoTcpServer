@@ -20,7 +20,10 @@ type GlobalConfig struct {
 	Version        string `json:"version"`
 	MaxConn        int    `json:"maxConn"`        // 最大连接数
 	MaxPackingSize uint32 `json:"maxPackingSize"` // 当前服务器一次数据包的最大值
+	WorkerPoolSize uint32 `json:"workerPoolSize"` // 当前业务工作Worker池的Goroutine数量
 }
+
+const MaxWorkerPoolSize uint32 = 1024
 
 var GlobalObj *GlobalConfig
 
@@ -34,9 +37,15 @@ func init() {
 		Host:           "0.0.0.0",
 		MaxConn:        10,
 		MaxPackingSize: 4096,
+		WorkerPoolSize: 10,
 	}
 	// read json config
 	GlobalObj.loadFormJson()
+	if GlobalObj.WorkerPoolSize > MaxWorkerPoolSize {
+		fmt.Printf("[Server Config WARNING] Server worker pool size is larger than max worker pool size,"+
+			" size is reset to %d\n", MaxWorkerPoolSize)
+		GlobalObj.WorkerPoolSize = MaxWorkerPoolSize
+	}
 }
 
 func (g *GlobalConfig) loadFormJson() {
