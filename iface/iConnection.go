@@ -16,6 +16,12 @@ type IConnection interface {
 	GetClientTcpStatus() net.Addr
 	// SendMessage 发送数据，将数据封包为Message并发送给远程的客户端
 	SendMessage(msgId uint32, data []byte) error
+	// SetConnectionProperty 设置连接属性
+	SetConnectionProperty(key string, value interface{})
+	// GetConnectionProperty 获得连接属性
+	GetConnectionProperty(key string) interface{}
+	// RemoveConnectionProperty 移除连接属性
+	RemoveConnectionProperty(key string)
 }
 
 // HandleFunc 定义一个处理连接业务的方法

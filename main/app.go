@@ -93,8 +93,10 @@ func (r *HelloRouter) DoHandle(req iface.IRequest) {
 func main() {
 	// 创建一个Server句柄
 	s := network.NewServer("tcp4")
+	/* Config Router */
 	s.AddRouter(0, &PingRouter{name: "ping router"})
 	s.AddRouter(1, &HelloRouter{name: "hello router"})
+	/* Config Hook */
 	// 启动Server
 	utils.GlobalObj.TcpServer = s
 	s.Serve()

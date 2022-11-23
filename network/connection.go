@@ -7,9 +7,14 @@ import (
 	"net"
 	"server/iface"
 	"server/utils"
+	"sync"
 )
 
 type Connection struct {
+
+	// 当前Connection属于哪个Server
+	TcpServer iface.IServer
+
 	// 当前连接的TCP套接字
 	Conn *net.TCPConn
 
@@ -27,6 +32,12 @@ type Connection struct {
 
 	// 消息处理器，有缓冲的管道
 	MsgHandler iface.IMessageHandler
+
+	// 连接属性（集合）
+	PropertyMap map[string]interface{}
+
+	// 属性集合锁
+	PropertyLock sync.RWMutex
 }
 
 // startReader 从当前连接读数据的模块
@@ -110,6 +121,8 @@ func (c *Connection) Start() {
 	go c.startReader()
 	// 启动从当前连接写数据的业务
 	go c.startWriter()
+	// hook OnConnectionStart
+	c.TcpServer.CallOnConnectionStart(c)
 }
 
 func (c *Connection) Stop() {
@@ -117,10 +130,13 @@ func (c *Connection) Stop() {
 	if c.IsClosed {
 		return
 	}
+	c.TcpServer.CallOnConnectionStop(c)
 	// 告知Writer关闭
 	c.ExitChan <- true
-	c.IsClosed = true
+	// 从连接管理器中删除
+	c.TcpServer.GetConnectionManager().Remove(c)
 	// 回收资源
+	c.IsClosed = true
 	err := c.Conn.Close()
 	if err != nil {
 		fmt.Printf("[Connection STOP ERROR] Connection %d stopped error:%s\n", c.ConnId, err)
@@ -163,15 +179,43 @@ func (c *Connection) SendMessage(msgId uint32, data []byte) error {
 	return nil
 }
 
+func (c *Connection) SetConnectionProperty(key string, value interface{}) {
+	c.PropertyLock.Lock()
+	defer c.PropertyLock.Unlock()
+	c.PropertyMap[key] = value
+}
+
+func (c *Connection) GetConnectionProperty(key string) interface{} {
+	c.PropertyLock.RLock()
+	defer c.PropertyLock.RUnlock()
+	if value, ok := c.PropertyMap[key]; ok {
+		return value
+	} else {
+		return nil
+	}
+}
+
+func (c *Connection) RemoveConnectionProperty(key string) {
+	c.PropertyLock.Lock()
+	defer c.PropertyLock.Unlock()
+	if _, ok := c.PropertyMap[key]; ok {
+		delete(c.PropertyMap, key)
+	}
+}
+
 // NewConnection 初始化连接模块的方法
-func NewConnection(conn *net.TCPConn, id uint32, msgHandler iface.IMessageHandler) *Connection {
+func NewConnection(server iface.IServer, conn *net.TCPConn, id uint32, msgHandler iface.IMessageHandler) *Connection {
 	c := &Connection{
+		TcpServer:   server,
 		Conn:        conn,
 		ConnId:      id,
 		IsClosed:    false,
 		MsgHandler:  msgHandler,
 		MessageChan: make(chan []byte),
 		ExitChan:    make(chan bool, 1),
+		PropertyMap: make(map[string]interface{}),
 	}
+	// Add操作一定是串行的
+	c.TcpServer.GetConnectionManager().Add(c)
 	return c
 }

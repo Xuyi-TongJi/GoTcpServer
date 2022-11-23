@@ -16,8 +16,12 @@ type Server struct {
 	Port           int
 	MaxConn        int
 	MaxPackingSize uint32
-	// 消息管理模块 用于绑定msgId和对应业务的处理关系
-	MsgHandler iface.IMessageHandler
+	MsgHandler     iface.IMessageHandler
+	ConnManager    iface.IConnectionManager
+	// Hook
+	OnConnStart func(c iface.IConnection)
+	// Hook
+	OnConnStop func(c iface.IConnection)
 }
 
 func logConfig() {
@@ -28,6 +32,7 @@ func logConfig() {
 	fmt.Println("Port: ", utils.GlobalObj.TcpPort)
 	fmt.Println("MaxConn: ", utils.GlobalObj.MaxConn)
 	fmt.Println("MaxPackagingSize: ", utils.GlobalObj.MaxPackingSize)
+	fmt.Println("WorkerPoolSize: ", utils.GlobalObj.WorkerPoolSize)
 	fmt.Printf("[Server START] Server Listener at IP: %s, Port: %d, is starting\n",
 		utils.GlobalObj.Host, utils.GlobalObj.TcpPort)
 }
@@ -56,11 +61,18 @@ func (s *Server) Start() {
 			// 如果有客户端连接过来，阻塞会返回
 			conn, err := listener.AcceptTCP()
 			if err != nil {
-				fmt.Printf("[Server BUSINESS ERROR] Accept error:%s\n", err)
+				fmt.Printf("[Server Listener ERROR] Accept error:%s\n", err)
+				continue
+			}
+			// 判断连接是否超过最大连接数量, 超过则拒绝连接
+			if total := s.ConnManager.Total(); total >= utils.GlobalObj.MaxConn {
+				// TODO 给客户端响应一个超出最大连接错误报告
+				fmt.Printf("[Server Connection REFUSED] Connection Refused, there are %d current connection alive\n", total)
+				_ = conn.Close()
 				continue
 			}
 			// Connection模块，得到处理业务的connection句柄
-			socket := NewConnection(conn, cid, s.MsgHandler)
+			socket := NewConnection(s, conn, cid, s.MsgHandler)
 			cid += 1
 			// 启动当前的连接业务处理
 			go socket.Start()
@@ -70,9 +82,12 @@ func (s *Server) Start() {
 
 func (s *Server) Stop() {
 	// TODO 将服务器的资源，状态或一些已经开辟的链接信息，进行停止或回收
+	fmt.Printf("[Server Stop] Server is ready to stop\n")
+	// 清除所有connection
+	s.ConnManager.ClearAll()
 }
 
-// Serve 阻塞
+// Serve 启动Server
 func (s *Server) Serve() {
 	s.Start()
 	//TODO 启动服务器之后的额外业务
@@ -81,9 +96,32 @@ func (s *Server) Serve() {
 	select {}
 }
 
-// AddRouter 添加路由
 func (s *Server) AddRouter(msgId uint32, r iface.IRouter) {
 	s.MsgHandler.AddRouter(msgId, r)
+}
+
+func (s *Server) GetConnectionManager() iface.IConnectionManager {
+	return s.ConnManager
+}
+
+func (s *Server) SetOnConnectionStart(hook func(connection iface.IConnection)) {
+	s.OnConnStart = hook
+}
+
+func (s *Server) SetOnConnectionStop(hook func(connection iface.IConnection)) {
+	s.OnConnStop = hook
+}
+
+func (s *Server) CallOnConnectionStart(connection iface.IConnection) {
+	if s.OnConnStart != nil {
+		s.OnConnStart(connection)
+	}
+}
+
+func (s *Server) CallOnConnectionStop(connection iface.IConnection) {
+	if s.OnConnStop != nil {
+		s.OnConnStop(connection)
+	}
 }
 
 // NewServer 初始化Server模块的方法
@@ -97,5 +135,6 @@ func NewServer(ipVersion string) iface.IServer {
 		MaxConn:        utils.GlobalObj.MaxConn,
 		MaxPackingSize: utils.GlobalObj.MaxPackingSize,
 		MsgHandler:     NewMessageHandler(),
+		ConnManager:    NewConnectionManager(),
 	}
 }

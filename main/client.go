@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 15; i++ {
 		go func() {
 			// 连接服务器，得到一个conn连接
 			fmt.Println("[Client START]Client start...")
@@ -23,12 +23,13 @@ func main() {
 				return
 			}
 			for {
+				var id uint32 = 1
 				// 发送Message消息 TLV格式
 				dp := network.DataPack{}
 				var s string = "ping, server!"
 				length := uint32(len(s))
 				msg := &network.Message{
-					Id:   0,
+					Id:   id,
 					Len:  length,
 					Data: []byte(s),
 				}
@@ -44,14 +45,12 @@ func main() {
 						err)
 					continue
 				}
-				// 拆包
-
 				// receive message from server
 				head := make([]byte, dp.GetHeadLen())
 				_, err = io.ReadFull(conn, head)
 				if err != nil {
-					fmt.Printf("[Client Reading Error] Error receiving message from server, error: %s\n", err)
-					continue
+					fmt.Printf("[Client Reading Error] Error receiving message from server, error: %s\n, connection closed", err)
+					break
 				}
 				// unpack len and id
 				unpack, err := dp.Unpack(head)
@@ -69,7 +68,12 @@ func main() {
 				}
 				fmt.Printf("[Client Reading] Receiving message (id=%d): %s, success\n",
 					unpack.GetMsgId(), unpack.GetData())
-				time.Sleep(5 * time.Second)
+				time.Sleep(15 * time.Second)
+				if int(id) == 1 {
+					id = 0
+				} else {
+					id = 1
+				}
 			}
 		}()
 	}

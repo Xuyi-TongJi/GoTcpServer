@@ -4,5 +4,6 @@
   "tcpPort": 8080,
   "version": "1.0",
   "maxConn": 10,
-  "maxPackingSize": 4096
+  "maxPackingSize": 4096,
+  "workerPoolSize": 10
 }

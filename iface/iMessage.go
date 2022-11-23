@@ -1,8 +1,9 @@
 package iface
 
 /*
-IMessage接口封装请求消息
+	IMessage接口封装请求消息
 */
+
 type IMessage interface {
 	GetMsgId() uint32
 
