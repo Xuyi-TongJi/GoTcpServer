@@ -22,6 +22,8 @@ type IConnection interface {
 	GetConnectionProperty(key string) interface{}
 	// RemoveConnectionProperty 移除连接属性
 	RemoveConnectionProperty(key string)
+	// HasClosed 连接是否关闭
+	HasClosed() bool
 }
 
 // HandleFunc 定义一个处理连接业务的方法

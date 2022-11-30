@@ -203,6 +203,10 @@ func (c *Connection) RemoveConnectionProperty(key string) {
 	}
 }
 
+func (c *Connection) HasClosed() bool {
+	return c.IsClosed
+}
+
 // NewConnection 初始化连接模块的方法
 func NewConnection(server iface.IServer, conn *net.TCPConn, id uint32, msgHandler iface.IMessageHandler) *Connection {
 	c := &Connection{
