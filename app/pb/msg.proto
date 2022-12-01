@@ -26,3 +26,8 @@ message Position {
   float Z = 3;
   float V = 4;
 }
+
+// 世界聊天
+message Talk {
+  string Content = 1;
+}

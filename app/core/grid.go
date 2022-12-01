@@ -21,7 +21,7 @@ type Grid struct {
 	// 格子的下边界坐标
 	MaxY int
 	// 当前格子内玩家或者物体成员的ID集合
-	PlayerIds map[int]bool
+	PlayerIds map[int32]bool
 	// 保护当前集合的锁
 	Lock sync.RWMutex
 }
@@ -33,25 +33,25 @@ func NewGrid(gId, minX, maxX, minY, maxY int) *Grid {
 		MaxX:      maxX,
 		MinY:      minY,
 		MaxY:      maxY,
-		PlayerIds: make(map[int]bool),
+		PlayerIds: make(map[int32]bool),
 	}
 }
 
-func (g *Grid) AddPlayer(playerId int) {
+func (g *Grid) AddPlayer(playerId int32) {
 	// write lock
 	g.Lock.Lock()
 	defer g.Lock.Unlock()
 	g.PlayerIds[playerId] = true
 }
 
-func (g *Grid) RemovePlayer(playerId int) {
+func (g *Grid) RemovePlayer(playerId int32) {
 	// remove
 	g.Lock.Lock()
 	defer g.Lock.Unlock()
 	delete(g.PlayerIds, playerId)
 }
 
-func (g *Grid) GetPlayerIds() (playerIds []int) {
+func (g *Grid) GetPlayerIds() (playerIds []int32) {
 	g.Lock.Lock()
 	defer g.Lock.Unlock()
 	for k, _ := range g.PlayerIds {
@@ -62,5 +62,5 @@ func (g *Grid) GetPlayerIds() (playerIds []int) {
 
 func (g *Grid) String() string {
 	return fmt.Sprintf("Grid id=%d, minX=%d, maxX=%d, minY=%d, maxY=%d, playerIds=%v",
-		g.GId, g.MinX, g.MaxX, g.MinY, g.PlayerIds)
+		g.GId, g.MinX, g.MaxX, g.MinY, g.MaxY, g.PlayerIds)
 }

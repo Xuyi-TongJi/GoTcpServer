@@ -24,12 +24,12 @@ func NewMessageHandler() iface.IMessageHandler {
 	}
 }
 
-// DoHandle 执行request所绑定的Router的业务
+// DoHandle 执行业务的和新方法：执行request所绑定的Router的业务
 func (m *MessageHandler) DoHandle(request iface.IRequest) {
 	msgId := request.GetMsgId()
 	if router, exist := m.ApiMap[msgId]; !exist {
-		panic("[MessageHandler Handle Router ERROR] Message id = +" +
-			strconv.Itoa(int(msgId)) + ", missing router")
+		fmt.Printf("[MessageHandler Handle Router ERROR] Message id = " +
+			strconv.Itoa(int(msgId)) + ", missing router\n")
 	} else {
 		// 调用router的模版方法
 		iface.Handle(router, request)

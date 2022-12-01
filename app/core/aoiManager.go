@@ -1,5 +1,14 @@
 package core
 
+const (
+	AoiMinX int = 85
+	AoiMaxX int = 410
+	AoiCntX int = 10
+	AoiMinY int = 75
+	AoiMaxY int = 400
+	AoiCntY int = 20
+)
+
 /*
 	AOI区域管理模块
 */
@@ -78,7 +87,7 @@ func (m *AoiManager) GetSurroundingByGId(gId int) (grids []*Grid) {
 }
 
 // GetPlayerIdsByPos 通过横纵坐标获得周边九宫格内所有玩家的信息
-func (m *AoiManager) GetPlayerIdsByPos(x, y float32) (playerIds []int) {
+func (m *AoiManager) GetPlayerIdsByPos(x, y float32) (playerIds []int32) {
 	gId := m.getGridByCoordinate(x, y)
 	grids := m.GetSurroundingByGId(gId)
 	for _, g := range grids {
@@ -90,21 +99,21 @@ func (m *AoiManager) GetPlayerIdsByPos(x, y float32) (playerIds []int) {
 }
 
 // AddPIdToGrid 添加一个playerId到格子中
-func (m *AoiManager) AddPIdToGrid(pId, gId int) {
+func (m *AoiManager) AddPIdToGrid(pId int32, gId int) {
 	if _, e := m.Grids[gId]; e {
 		m.Grids[gId].AddPlayer(pId)
 	}
 }
 
 // RemovePIdFromGrid 从Grid中删除玩家
-func (m *AoiManager) RemovePIdFromGrid(pId, gId int) {
+func (m *AoiManager) RemovePIdFromGrid(pId int32, gId int) {
 	if _, e := m.Grids[gId]; e {
 		m.Grids[gId].RemovePlayer(pId)
 	}
 }
 
 // GetPIdsFromGrid 通过GId获取全部的playerId
-func (m *AoiManager) GetPIdsFromGrid(gId int) (playerIds []int) {
+func (m *AoiManager) GetPIdsFromGrid(gId int) (playerIds []int32) {
 	if _, e := m.Grids[gId]; e {
 		for playerId, _ := range m.Grids[gId].PlayerIds {
 			playerIds = append(playerIds, playerId)
@@ -114,13 +123,13 @@ func (m *AoiManager) GetPIdsFromGrid(gId int) (playerIds []int) {
 }
 
 // AddToGridByCoordinate 通过坐标添加player
-func (m *AoiManager) AddToGridByCoordinate(pId int, x, y float32) {
+func (m *AoiManager) AddToGridByCoordinate(pId int32, x, y float32) {
 	gId := m.getGridByCoordinate(x, y)
 	m.AddPIdToGrid(pId, gId)
 }
 
 // RemoveFromGridByCoordinate 通过坐标删除player
-func (m *AoiManager) RemoveFromGridByCoordinate(pId int, x, y float32) {
+func (m *AoiManager) RemoveFromGridByCoordinate(pId int32, x, y float32) {
 	gId := m.getGridByCoordinate(x, y)
 	m.RemovePIdFromGrid(pId, gId)
 }
