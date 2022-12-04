@@ -46,7 +46,8 @@ func NewPlayer(conn iface.IConnection) *Player {
 	}
 }
 
-// SendMessage 玩家发送给客户端消息的方法，将pb的protobuf数据序列化之后，再调用server的sendMessage方法
+// SendMessage 服务器发送给客户端消息的方法（由当前玩家的Connection Socket发送）
+// 将pb的protobuf数据序列化之后，再调用server的sendMessage方法
 func (p *Player) SendMessage(msgId uint32, data proto.Message) {
 	// 将proto Message结构题序列化 转换成二进制
 	msg, err := proto.Marshal(data)
@@ -59,6 +60,7 @@ func (p *Player) SendMessage(msgId uint32, data proto.Message) {
 		fmt.Printf("[APP WARNING] Player %d Connection has been closed\n", p.Pid)
 		return
 	}
+	// Connection.SendMessage 将二进制数据打包成TLV格式
 	err = p.Conn.SendMessage(msgId, msg)
 	if err != nil {
 		fmt.Printf("[APP ERROR] Player %d send message to client error:%s\n", p.Pid, err)
@@ -91,4 +93,22 @@ func (p *Player) BroadcastStartPosition() {
 	}
 	// msgId = 200
 	p.SendMessage(200, protoMessage)
+}
+
+// Talk 将玩家的聊天内容发送给其他所有玩家
+// 调用所有玩家的SendMessage方法，构造广播数据
+func (p *Player) Talk(content string) {
+	// msgId
+	protoMessage := &pb.BroadCast{
+		Pid: p.Pid,
+		Tp:  1,
+		Data: &pb.BroadCast_Content{
+			Content: content,
+		},
+	}
+	players := WorldManagerObj.GetAllPlayers()
+	for _, player := range players {
+		// 每个player给对应的客户端发送200消息
+		player.SendMessage(200, protoMessage)
+	}
 }
