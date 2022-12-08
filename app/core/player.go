@@ -112,3 +112,50 @@ func (p *Player) Talk(content string) {
 		player.SendMessage(200, protoMessage)
 	}
 }
+
+// SyncSurrounding 同步玩家上线的位置消息
+func (p *Player) SyncSurrounding() {
+	// 1. 获取九宫格所有玩家的信息
+	pIds := WorldManagerObj.AoiObj.GetPlayerIdsByPos(p.X, p.Z)
+	players := make([]*Player, len(pIds))
+	for _, pid := range pIds {
+		players = append(players, WorldManagerObj.GetPlayerByPid(pid))
+	}
+	// 2. 向周围所有玩家发送protoMsg消息
+	protoMsg := &pb.BroadCast{
+		Pid: p.Pid,
+		Tp:  2, // 广播坐标
+		Data: &pb.BroadCast_P{
+			P: &pb.Position{
+				X: p.X,
+				Y: p.Y,
+				Z: p.Z,
+				V: p.V,
+			},
+		},
+	}
+	// 2.2 全部周围的玩家都向各自的客户端发送200消息
+	for _, player := range players {
+		player.SendMessage(200, protoMsg)
+	}
+	// 3 周围玩家的信息发送给当前玩家的客户端
+	pbPlayers := make([]*pb.Player, len(players))
+	for i, player := range players {
+		pbPlayers[i].Pid = player.Pid
+		pbPlayers[i].P = &pb.Position{
+			X: player.X,
+			Y: player.Y,
+			Z: player.Z,
+			V: player.V,
+		}
+	}
+	syncPlayers := &pb.SyncPlayers{
+		Ps: pbPlayers,
+	}
+	// 202 message protocol
+	p.SendMessage(202, syncPlayers)
+}
+
+func (p *Player) UpdatePos(x float32, y float32, z float32, v float32) {
+
+}

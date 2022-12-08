@@ -21,6 +21,9 @@ func OnConnectionAdd(conn iface.IConnection) {
 	core.WorldManagerObj.AddPlayer(player)
 	conn.SetConnectionProperty("pId", player.Pid)
 
+	// 同步周边玩家（广播当前玩家的位置信息），告知他们当前玩家已经上线
+	player.SyncSurrounding()
+
 	fmt.Printf("[Player] Player %d is online\n", player.Pid)
 }
 
@@ -28,10 +31,12 @@ func main() {
 	s := network.NewServer("tcp4")
 	// 连接创建和销毁的HOOK钩子函数
 	s.SetOnConnectionStart(OnConnectionAdd)
-	// 注册路由业务
+	/* 注册路由业务 */
 
 	// 世界聊天业务
 	s.AddRouter(2, &apis.WorldChatApi{})
+	// 玩家移动业务
+
 	// 启动服务
 	s.Serve()
 }

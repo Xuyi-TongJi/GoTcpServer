@@ -21,7 +21,8 @@ func (wc *WorldChatApi) DoHandle(req iface.IRequest) {
 	protoMsg := &pb.Talk{}
 	err := proto.Unmarshal(req.GetData(), protoMsg)
 	if err != nil {
-		fmt.Printf("[World Chat Router ERROR] Unable to unmarshal proto binary data, error:%s\n", err)
+		fmt.Printf("[World Chat Router ERROR] Connection %d, Unable to unmarshal proto binary data, error:%s\n",
+			req.GetConnection().GetConnId(), err)
 		return
 	}
 	pId := req.GetConnection().GetConnectionProperty("pId")
